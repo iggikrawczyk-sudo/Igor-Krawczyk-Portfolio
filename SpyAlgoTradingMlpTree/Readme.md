@@ -2,6 +2,34 @@ This project was initially intended to test whether weather data and other non-f
 However, as I improved the models, they all started to outperform the market. What really swayed me from my original idea was that 
 I tested all of the models using the same configurations for the horizons (`signal_horizon` — how far into the future we predict the change in the market, and `pnl_horizon` — how long we hold the position), 
 availability to short, and certainty threshold. This was not a fair comparison.
+Whole config:
+TRAIN_START = "2000-01-01"
+TRAIN_END   = "2018-12-31"
+TEST_START  = "2019-01-01"
+TEST_END    = "2026-07-30"
+
+TICKER = "SPY"
+WEATHER_LAT = 40.7128   # NYC -- proxy for "NYSE weather"
+WEATHER_LON = -74.0060
+
+THRESHOLDS = [
+    0.0000,
+    0.0005,
+    0.0010,
+    0.0015,
+    0.0020,
+    0.0025,
+    0.0030,
+    0.0040,
+    0.0050,
+]
+ALLOW_SHORT_OPTIONS = [False, True]
+COST_BPS          = 0.6
+SNAPSHOT_SLIP_BPS = 0.0     # extra per-side cost vs official close (near-close fill)
+
+RETRAIN   = "frozen"        # "frozen" or "rolling"
+ROLL_FREQ = "MS"
+ANN       = 252
 Therefore, I changed my original idea to focus on building the best models possible and running 28,800 simulations to find the best configuration for each model. (see grid_heatmaps.png)
 
 
@@ -35,4 +63,4 @@ Here is my results **costs included** (MLP will vary because its starts weighten
 So if we use leverage on the best model fin-only tree (I dediced to choose that one even tho it is not the best score nor return because of exposure and that pnl 
 horizon is below 10 which changes the bps for this one the costs are quite well approximated for fin+weather with pnl horizon >10 the costs would be higher) 
 from my resoning we would leverage -33.72/14.55 = 2.3175257732
-So the Return would be 338.26 * 2.3175257732 = 783.926268041% which is around 38.5% annualized
+So the Return would be 338.26 * 2.3175257732 = 783.926268041% which is around 38.5% annualized for the 6.5 years of tests

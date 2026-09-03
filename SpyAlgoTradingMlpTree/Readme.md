@@ -5,30 +5,34 @@ availability to short, and certainty threshold. This was not a fair comparison.
 Therefore, I changed my original idea to focus on building the best models possible and running 28,800 simulations to find the best configuration for each model. (see grid_heatmaps.png)
 
 
-      model    features signal_horizon pnl_horizon  threshold allow_short 
-      Tree    fin-only             12          17     0.0040        True      
-      Tree fin+weather             12          17     0.0050        True      
+----------------------------------------------------------------------------------------------------
+     model    features signal_horizon pnl_horizon  threshold allow_short 
+      Tree fin+weather             13          18     0.0000        True   
+      Tree    fin-only              4           8     0.0020        True      
        MLP fin+weather              5           4     0.0005       False      
        MLP    fin-only             14          12     0.0000       False       
+ 
      
 The way I determined which model is the best is by using my "Score," which is calculated as:
 **Score = Total Return × (0.3372 / Max Drawdown)**
 0.3372 is the maximum drawdown of SPY over that period. 
 I decided that maximum drawdown should be the deciding factor for or against using leverage, and that SPY's maximum drawdown should be the maximum drawdown to accept.
-At first, the Score formula also included exposure, since higher exposure and leverage result in higher fees. However, this produced worse results, and the Tree models, 
-which would benefit the most from leverage in my case, have low exposure. As a result, their scores are not particularly high, especially for the Tree models that would benefit the most from leverage.
+At first, the Score formula also included exposure, since higher exposure and leverage result in higher fees. However, this produced worse results with very few trades 
+like 14 in 6.5 years which I deemed more luck than real results
 
 
 
-Here is my results MLP will vary because its starts weightening from seed which will differ so the end results will sliglty vary when you run this code
+Here is my results **costs included** (MLP will vary because its starts weightening from seed which will differ so the end results will sliglty vary when you run this code)
 
-| Model | Features | Signal Horizon | PnL Horizon | Threshold | Allow Short | Total Return | Max Drawdown | Exposure | Score | Sharpe | Sortino | Hit Rate | Trades |
-|---|---|---:|---:|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Tree | Fin-only | 12 | 17 | 0.0040 | Yes | 134.19% | -10.43% | 12.51% | 69.398 | 0.92 | 0.52 | 55.56% | 14 |
-| Tree | Fin + Weather | 12 | 17 | 0.0050 | Yes | 133.46% | -10.43% | 12.51% | 69.021 | 0.92 | 0.52 | 55.56% | 14 |
-| MLP | Fin + Weather | 5 | 4 | 0.0005 | No | 305.09% | -22.35% | 61.80% | 14.897 | 1.24 | 1.33 | 46.39% | 294 |
-| MLP | Fin-only | 14 | 12 | 0.0000 | No | 242.60% | -26.41% | 86.02% | 7.203 | 1.01 | 1.23 | 51.72% | 137 |
-| Buy & Hold | — | — | — | — | — | 225.93% | -33.72% | 100.00% | — | 0.90 | 1.11 | 55.63% | — |
+| Model | Features | Score | Total Return | Max Drawdown | Exposure | Sharpe | Sortino | Hit Rate | Trades | Signal Horizon | PnL Horizon | Threshold | Allow Short |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|:---:|
+| Tree | Fin + Weather | 8.716 | 394.42% | -15.26% | 94.69% | 1.21 | 1.72 | 51.47% | 101 | 13 | 18 | 0.0000 | Yes |
+| Tree | Fin-only | 7.837 | 338.26% | -14.55% | 42.88% | 1.28 | 1.28 | 51.36% | 102 | 4 | 8 | 0.0020 | Yes |
+| MLP | Fin + Weather | 4.603 | 305.08% | -22.35% | 61.80% | 1.24 | 1.33 | 46.39% | 294 | 5 | 4 | 0.0005 | No |
+| MLP | Fin-only | 3.098 | 242.60% | -26.41% | 86.02% | 1.01 | 1.23 | 51.72% | 137 | 14 | 12 | 0.0000 | No |
+| Buy & Hold | — | — | 225.93% | -33.72% | 100.00% | 0.90 | 1.11 | 55.63% | — | — | — | — | — |
 
-So if we use leverage on the best model fin-only tree from my resoning we would leverage -33.72/10.43 = 3.23298178332
-So the Return would be 134.19 * 3.23298178332 = 433.833825503% which is around 25.3% annualized
+So if we use leverage on the best model fin-only tree (I dediced to choose that one even tho it is not the best score nor return because of exposure and that pnl 
+horizon is below 10 which changes the bps for this one the costs are quite well approximated for fin+weather with pnl horizon >10 the costs would be higher) 
+from my resoning we would leverage -33.72/14.55 = 2.3175257732
+So the Return would be 338.26 * 2.3175257732 = 783.926268041% which is around 38.5% annualized

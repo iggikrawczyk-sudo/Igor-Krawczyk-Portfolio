@@ -35,11 +35,11 @@ Therefore, I changed my original idea to focus on building the best models possi
 
 ----------------------------------------------------------------------------------------------------
      model    features signal_horizon pnl_horizon  threshold allow_short 
-      Tree fin+weather             13          18     0.0000        True   
-      Tree    fin-only              4           8     0.0020        True      
+      Tree fin+weather             13          18     0.0000        True      
+      Tree    fin-only              4           8     0.0020        True     
        MLP fin+weather              5           4     0.0005       False      
        MLP    fin-only             14          12     0.0000       False       
- 
+           
      
 The way I determined which model is the best is by using my "Score," which is calculated as:
 **Score = Total Return × (0.3372 / Max Drawdown)**
@@ -54,9 +54,9 @@ Here is my results **costs included** (MLP will vary because its starts weighten
 
 | Model | Features | Score | Total Return | Max Drawdown | Exposure | Sharpe | Sortino | Hit Rate | Trades | Signal Horizon | PnL Horizon | Threshold | Allow Short |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|:---:|
-| Tree | Fin + Weather | 8.716 | 394.42% | -15.26% | 94.69% | 1.21 | 1.72 | 51.47% | 101 | 13 | 18 | 0.0000 | Yes |
+| Tree | Fin + Weather | 8.715 | 394.41% | -15.26% | 94.69% | 1.21 | 1.72 | 51.47% | 101 | 13 | 18 | 0.0000 | Yes |
 | Tree | Fin-only | 7.837 | 338.26% | -14.55% | 42.88% | 1.28 | 1.28 | 51.36% | 102 | 4 | 8 | 0.0020 | Yes |
-| MLP | Fin + Weather | 4.603 | 305.08% | -22.35% | 61.80% | 1.24 | 1.33 | 46.39% | 294 | 5 | 4 | 0.0005 | No |
+| MLP | Fin + Weather | 4.603 | 305.09% | -22.35% | 61.80% | 1.24 | 1.33 | 46.39% | 294 | 5 | 4 | 0.0005 | No |
 | MLP | Fin-only | 3.098 | 242.60% | -26.41% | 86.02% | 1.01 | 1.23 | 51.72% | 137 | 14 | 12 | 0.0000 | No |
 | Buy & Hold | — | — | 225.93% | -33.72% | 100.00% | 0.90 | 1.11 | 55.63% | — | — | — | — | — |
 

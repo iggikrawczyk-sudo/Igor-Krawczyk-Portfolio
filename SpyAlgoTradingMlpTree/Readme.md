@@ -22,12 +22,13 @@ which would benefit the most from leverage in my case, have low exposure. As a r
 
 Here is my results MLP will vary because its starts weightening from seed which will differ so the end results will sliglty vary when you run this code
 
-model    features signal_horizon pnl_horizon  threshold allow_short Total Return Max Drawdown Exposure  Score  Sharpe  Sortino Hit Rate Trades
-Tree    fin-only             12          17     0.0040        True      134.19%      -10.43%   12.51% 69.398    0.92     0.52   55.56%     14
-Tree fin+weather             12          17     0.0050        True      133.46%      -10.43%   12.51% 69.021    0.92     0.52   55.56%     14
-MLP fin+weather              5           4     0.0005       False      305.09%      -22.35%    61.8% 14.897    1.24     1.33   46.39%    294
-MLP    fin-only             14          12     0.0000       False       242.6%      -26.41%   86.02%  7.203    1.01     1.23   51.72%    137
-Buy & Hold                 NaN         NaN       NaN        NaN         225.93%      -33.72%   100.0%   NaN    0.90     1.11   55.63%      
+| Model | Features | Signal Horizon | PnL Horizon | Threshold | Allow Short | Total Return | Max Drawdown | Exposure | Score | Sharpe | Sortino | Hit Rate | Trades |
+|---|---|---:|---:|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Tree | Fin-only | 12 | 17 | 0.0040 | Yes | 134.19% | -10.43% | 12.51% | 69.398 | 0.92 | 0.52 | 55.56% | 14 |
+| Tree | Fin + Weather | 12 | 17 | 0.0050 | Yes | 133.46% | -10.43% | 12.51% | 69.021 | 0.92 | 0.52 | 55.56% | 14 |
+| MLP | Fin + Weather | 5 | 4 | 0.0005 | No | 305.09% | -22.35% | 61.80% | 14.897 | 1.24 | 1.33 | 46.39% | 294 |
+| MLP | Fin-only | 14 | 12 | 0.0000 | No | 242.60% | -26.41% | 86.02% | 7.203 | 1.01 | 1.23 | 51.72% | 137 |
+| Buy & Hold | — | — | — | — | — | 225.93% | -33.72% | 100.00% | — | 0.90 | 1.11 | 55.63% | — |
 
 So if we use leverage on the best model fin-only tree from my resoning we would leverage -33.72/10.43 = 3.23298178332
 So the Return would be 134.19 * 3.23298178332 = 433.833825503% which is around 25.3% annualized

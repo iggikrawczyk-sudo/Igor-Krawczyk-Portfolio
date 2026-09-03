@@ -2,7 +2,7 @@ This project was initially intended to test whether weather data and other non-f
 However, as I improved the models, they all started to outperform the market. What really swayed me from my original idea was that 
 I tested all of the models using the same configurations for the horizons (`signal_horizon` — how far into the future we predict the change in the market, and `pnl_horizon` — how long we hold the position), 
 availability to short, and certainty threshold. This was not a fair comparison.
-Therefore, I changed my original idea to focus on building the best models possible and running 28,800 simulations to find the best configuration for each model.
+Therefore, I changed my original idea to focus on building the best models possible and running 28,800 simulations to find the best configuration for each model. (see grid_heatmaps.png)
 
 
       model    features signal_horizon pnl_horizon  threshold allow_short 

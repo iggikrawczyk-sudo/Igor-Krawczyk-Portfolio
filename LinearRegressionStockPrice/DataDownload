@@ -1,0 +1,711 @@
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import time
+import os
+
+
+# ============================================================
+# TICKERS
+# ============================================================
+
+tickers = [
+
+    # =========================================================
+    # MEGA-CAP / PLATFORMS
+    # =========================================================
+    "NVDA", "AAPL", "MSFT", "AMZN", "GOOG",
+    "META", "TSLA", "AVGO", "ORCL", "NFLX",
+
+    # =========================================================
+    # SEMICONDUCTORS
+    # =========================================================
+    "AMD", "INTC", "MU", "QCOM", "TXN",
+    "ADI", "NXPI", "MCHP", "ON", "MPWR",
+    "MRVL", "LRCX", "AMAT", "KLAC", "TER",
+    "ASML", "TSM", "UMC", "STM", "GFS",
+
+    # =========================================================
+    # SEMICONDUCTOR / AI EQUIPMENT & COMPONENTS
+    # =========================================================
+    "ANET", "APH", "GLW", "COHR", "ENTG",
+    "ONTO", "ACLS", "FORM", "CAMT", "SMCI",
+    "VRT", "DELL", "HPE", "NTAP", "WDC",
+
+    # =========================================================
+    # SOFTWARE / ENTERPRISE
+    # =========================================================
+    "CRM", "NOW", "ADBE", "INTU", "SAP",
+    "IBM", "ADSK", "CDNS", "SNPS", "WDAY",
+    "PANW", "CRWD", "FTNT", "ZS", "OKTA",
+    "GEN", "CHKP", "DDOG", "SNOW", "MDB",
+    "NET", "TEAM", "HUBS", "GTLB", "ESTC", "CFLT",
+
+    # =========================================================
+    # INTERNET / CONSUMER TECH
+    # =========================================================
+    "UBER", "ABNB", "SHOP", "PYPL", "PINS",
+    "SNAP", "SPOT", "DASH", "ROKU", "ETSY",
+    "EBAY", "BKNG",
+
+    # =========================================================
+    # FINTECH / PAYMENTS
+    # =========================================================
+    "V", "MA", "AXP", "FIS", "FI",
+    "GPN", "COF", "SOFI",
+
+    # =========================================================
+    # CYBER / DATA / AI
+    # =========================================================
+    "PLTR", "AI", "SOUN", "PATH", "RBRK",
+    "TEM", "IONQ",
+
+    # =========================================================
+    # HARDWARE / ELECTRONICS
+    # =========================================================
+    "CSCO", "HPQ", "KEYS", "TDY", "TRMB",
+    "FLEX", "JBL", "LOGI", "SONY", "GRMN",
+
+    # =========================================================
+    # CHINESE / HONG KONG TECH
+    # =========================================================
+    "BABA", "TCEHY", "BIDU", "JD", "PDD",
+    "NTES", "BILI", "NIO", "XPEV", "LI",
+
+    # =========================================================
+    # KOREAN TECH
+    # =========================================================
+    "005930.KS",
+    "000660.KS",
+
+    # =========================================================
+    # TAIWAN
+    # =========================================================
+    "2454.TW",
+    "2303.TW",
+    "3711.TW",
+
+    # =========================================================
+    # JAPAN
+    # =========================================================
+    "6758.T",
+    "8035.T",
+    "6857.T",
+    "6501.T",
+    "6701.T",
+    "6702.T",
+
+    # =========================================================
+    # EUROPE
+    # =========================================================
+    "NOKIA.HE",
+    "ERIC-B.ST",
+    "ADYEN.AS",
+    "DSY.PA",
+    "CAP.PA",
+    "SU.PA",
+    "IFX.DE",
+    "SIE.DE",
+    "DTE.DE",
+
+    # =========================================================
+    # OTHER LARGE TECHNOLOGY / INDUSTRIAL TECH
+    # =========================================================
+    "GE", "HON", "RTX", "CAT", "DE",
+    "ETN", "ROK", "EMR", "MMM", "TT",
+
+    # =========================================================
+    # ADDITIONAL GROWTH / TECH
+    # =========================================================
+    "ARM",
+    "LULU",
+    "COIN",
+    "RIVN",
+    "LCID",
+    "MSTR",
+]
+
+
+# Remove duplicates while preserving order
+tickers = list(dict.fromkeys(tickers))
+
+print(f"Total unique tickers: {len(tickers)}")
+
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def get_statement_value(statement, possible_names, column):
+    """
+    Safely retrieve a value from a Yahoo Finance financial
+    statement.
+
+    possible_names = possible names Yahoo may use for the row.
+    """
+
+    if statement is None or statement.empty:
+        return np.nan
+
+    if column not in statement.columns:
+        return np.nan
+
+    for name in possible_names:
+
+        if name in statement.index:
+
+            value = statement.loc[name, column]
+
+            if pd.isna(value):
+                return np.nan
+
+            return value
+
+    return np.nan
+
+
+def get_latest_quarter(ticker):
+
+    """
+    Get the most recent quarter that exists in the income
+    statement, balance sheet and cash flow statement.
+    """
+
+    try:
+        income = ticker.quarterly_income_stmt
+    except Exception:
+        income = pd.DataFrame()
+
+    try:
+        balance = ticker.quarterly_balance_sheet
+    except Exception:
+        balance = pd.DataFrame()
+
+    try:
+        cashflow = ticker.quarterly_cashflow
+    except Exception:
+        cashflow = pd.DataFrame()
+
+    if income is None or income.empty:
+        return None, None, None, None
+
+    # Get dates from income statement
+    income_dates = set(income.columns)
+
+    # Prefer a quarter that also exists in the other statements
+    possible_dates = list(income.columns)
+
+    for quarter in possible_dates:
+
+        if quarter in income_dates:
+
+            return (
+                income,
+                balance,
+                cashflow,
+                quarter
+            )
+
+    return None, None, None, None
+
+
+# ============================================================
+# MAIN DOWNLOAD
+# ============================================================
+
+results = []
+
+
+for i, symbol in enumerate(tickers, start=1):
+
+    print("=" * 70)
+    print(f"[{i}/{len(tickers)}] Downloading {symbol}")
+
+    try:
+
+        ticker = yf.Ticker(symbol)
+
+        # ----------------------------------------------------
+        # GET QUARTERLY STATEMENTS
+        # ----------------------------------------------------
+
+        income, balance, cashflow, quarter = get_latest_quarter(
+            ticker
+        )
+
+        if income is None:
+
+            print("  No quarterly financial data found.")
+
+            results.append({
+
+                "Ticker": symbol,
+                "Quarter": np.nan,
+
+                "Revenue": np.nan,
+                "Gross Profit": np.nan,
+                "Operating Income": np.nan,
+                "Basic Average Shares": np.nan,
+                "EBIT": np.nan,
+
+                "Operating Cashflow": np.nan,
+
+                "Total Debt": np.nan,
+
+                "Current Assets": np.nan,
+                "Current Liabilities": np.nan,
+
+                "Total Non Current Liabilities": np.nan,
+
+                "PE": np.nan,
+                "PEG": np.nan,
+
+                "Price on Report Date": np.nan
+
+            })
+
+            continue
+
+
+        print(f"  Quarter: {quarter}")
+
+
+        # ====================================================
+        # INCOME STATEMENT
+        # ====================================================
+
+        revenue = get_statement_value(
+            income,
+            [
+                "Total Revenue",
+                "Operating Revenue"
+            ],
+            quarter
+        )
+
+
+        gross_profit = get_statement_value(
+            income,
+            [
+                "Gross Profit"
+            ],
+            quarter
+        )
+
+
+        operating_income = get_statement_value(
+            income,
+            [
+                "Operating Income",
+                "Operating Income Loss"
+            ],
+            quarter
+        )
+
+
+        basic_average_shares = get_statement_value(
+            income,
+            [
+                "Basic Average Shares",
+                "Basic Average Shares Outstanding"
+            ],
+            quarter
+        )
+
+
+        ebit = get_statement_value(
+            income,
+            [
+                "EBIT",
+                "Normalized EBIT"
+            ],
+            quarter
+        )
+
+
+        # ====================================================
+        # CASH FLOW STATEMENT
+        # ====================================================
+
+        operating_cashflow = get_statement_value(
+            cashflow,
+            [
+                "Operating Cash Flow",
+                "Total Cash From Operating Activities",
+                "Cash Flow From Continuing Operating Activities"
+            ],
+            quarter
+        )
+
+
+        # ====================================================
+        # BALANCE SHEET
+        # ====================================================
+
+        total_debt = get_statement_value(
+            balance,
+            [
+                "Total Debt"
+            ],
+            quarter
+        )
+
+
+        current_assets = get_statement_value(
+            balance,
+            [
+                "Current Assets"
+            ],
+            quarter
+        )
+
+
+        current_liabilities = get_statement_value(
+            balance,
+            [
+                "Current Liabilities"
+            ],
+            quarter
+        )
+
+
+        total_non_current_liabilities = get_statement_value(
+            balance,
+            [
+                "Total Non Current Liabilities",
+                "Total Non-Current Liabilities"
+            ],
+            quarter
+        )
+
+
+        # ====================================================
+        # MARKET DATA
+        # ====================================================
+
+        pe = np.nan
+        peg = np.nan
+
+        try:
+
+            info = ticker.info
+
+            pe = info.get(
+                "trailingPE",
+                np.nan
+            )
+
+            peg = info.get(
+                "pegRatio",
+                np.nan
+            )
+
+        except Exception as e:
+
+            print(
+                f"  Could not retrieve PE/PEG: {e}"
+            )
+
+
+        # ====================================================
+        # PRICE ON REPORT DATE
+        # ====================================================
+
+        price_on_report_date = np.nan
+
+        try:
+
+            hist = ticker.history(
+                period="2y",
+                auto_adjust=False
+            )
+
+            if not hist.empty:
+
+                hist.index = pd.to_datetime(
+                    hist.index
+                )
+
+                # Convert quarter to timestamp
+                quarter_timestamp = pd.Timestamp(
+                    quarter
+                )
+
+                # Remove timezone if present
+                if hist.index.tz is not None:
+
+                    hist.index = hist.index.tz_localize(
+                        None
+                    )
+
+                # Find first trading day on or after
+                # the report quarter date
+                valid_prices = hist[
+                    hist.index >= quarter_timestamp
+                ]
+
+                if not valid_prices.empty:
+
+                    price_on_report_date = valid_prices[
+                        "Close"
+                    ].iloc[0]
+
+                else:
+
+                    # If no future date exists,
+                    # use closest available price
+                    price_on_report_date = hist[
+                        "Close"
+                    ].iloc[-1]
+
+        except Exception as e:
+
+            print(
+                f"  Could not retrieve price: {e}"
+            )
+
+
+        # ====================================================
+        # STORE RESULT
+        # ====================================================
+
+        results.append({
+
+            "Ticker": symbol,
+
+            "Quarter": quarter,
+
+            "Revenue": revenue,
+
+            "Gross Profit": gross_profit,
+
+            "Operating Income": operating_income,
+
+            "Basic Average Shares": basic_average_shares,
+
+            "EBIT": ebit,
+
+            "Operating Cashflow": operating_cashflow,
+
+            "Total Debt": total_debt,
+
+            "Current Assets": current_assets,
+
+            "Current Liabilities": current_liabilities,
+
+            "Total Non Current Liabilities":
+                total_non_current_liabilities,
+
+            "PE": pe,
+
+            "PEG": peg,
+
+            "Price on Report Date":
+                price_on_report_date
+
+        })
+
+
+        # ====================================================
+        # PRINT SUMMARY
+        # ====================================================
+
+        print(
+            f"  Revenue: {revenue}"
+        )
+
+        print(
+            f"  Operating Income: {operating_income}"
+        )
+
+        print(
+            f"  EBIT: {ebit}"
+        )
+
+        print(
+            f"  Operating Cashflow: {operating_cashflow}"
+        )
+
+        print(
+            f"  Total Debt: {total_debt}"
+        )
+
+        print(
+            f"  Current Assets: {current_assets}"
+        )
+
+        print(
+            f"  Current Liabilities: {current_liabilities}"
+        )
+
+        print(
+            f"  Non-Current Liabilities: "
+            f"{total_non_current_liabilities}"
+        )
+
+        print(
+            f"  PE: {pe}"
+        )
+
+        print(
+            f"  PEG: {peg}"
+        )
+
+        print(
+            f"  Price: {price_on_report_date}"
+        )
+
+
+    except Exception as e:
+
+        print(
+            f"  ERROR processing {symbol}: {e}"
+        )
+
+        results.append({
+
+            "Ticker": symbol,
+            "Quarter": np.nan,
+
+            "Revenue": np.nan,
+            "Gross Profit": np.nan,
+            "Operating Income": np.nan,
+            "Basic Average Shares": np.nan,
+            "EBIT": np.nan,
+
+            "Operating Cashflow": np.nan,
+
+            "Total Debt": np.nan,
+
+            "Current Assets": np.nan,
+            "Current Liabilities": np.nan,
+
+            "Total Non Current Liabilities": np.nan,
+
+            "PE": np.nan,
+            "PEG": np.nan,
+
+            "Price on Report Date": np.nan
+
+        })
+
+
+    # Small delay to reduce Yahoo requests
+    time.sleep(0.5)
+
+
+# ============================================================
+# CREATE DATAFRAME
+# ============================================================
+
+df = pd.DataFrame(results)
+
+
+# ============================================================
+# CLEAN DATA TYPES
+# ============================================================
+
+numeric_columns = [
+
+    "Revenue",
+    "Gross Profit",
+    "Operating Income",
+    "Basic Average Shares",
+    "EBIT",
+    "Operating Cashflow",
+    "Total Debt",
+    "Current Assets",
+    "Current Liabilities",
+    "Total Non Current Liabilities",
+    "PE",
+    "PEG",
+    "Price on Report Date"
+
+]
+
+
+for column in numeric_columns:
+
+    df[column] = pd.to_numeric(
+        df[column],
+        errors="coerce"
+    )
+
+
+# ============================================================
+# SORT
+# ============================================================
+
+df = df.sort_values(
+    by="Ticker"
+).reset_index(drop=True)
+
+
+# ============================================================
+# SAVE TO EXCEL
+# ============================================================
+
+excel_filename = "tech_quarterly_latest.xlsx"
+
+
+try:
+
+    with pd.ExcelWriter(
+        excel_filename,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            sheet_name="Latest Quarter",
+            index=False
+        )
+
+        # Create a second sheet with missing-data statistics
+        missing = pd.DataFrame({
+
+            "Column": df.columns,
+
+            "Missing Values": [
+                df[col].isna().sum()
+                for col in df.columns
+            ],
+
+            "Missing %": [
+                df[col].isna().mean() * 100
+                for col in df.columns
+            ]
+
+        })
+
+        missing.to_excel(
+            writer,
+            sheet_name="Missing Data",
+            index=False
+        )
+
+
+    print("\n" + "=" * 70)
+    print("DONE")
+    print("=" * 70)
+
+    print(
+        f"Saved to: {os.path.abspath(excel_filename)}"
+    )
+
+    print(
+        f"Rows: {len(df)}"
+    )
+
+    print(
+        f"Columns: {len(df.columns)}"
+    )
+
+
+except PermissionError:
+
+    print("\nERROR: Permission denied.")
+    print(
+        "Close the Excel file if it is currently open "
+        "and run the script again."
+    )
